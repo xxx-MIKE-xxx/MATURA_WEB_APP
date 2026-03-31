@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4efe5;
+  --surface: #efe5d7;
+  --surface-strong: #fffdf8;
+  --foreground: #181411;
+  --muted: #6c6258;
+  --line: #d3c2af;
+  --teal: #0f6d67;
+  --teal-soft: #d7ede8;
+  --navy: #1b2d43;
+  --coral: #c46c47;
+  --olive: #69744f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-navy: var(--navy);
+  --color-coral: var(--coral);
+  --color-olive: var(--olive);
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(15, 109, 103, 0.09), transparent 28%),
+    radial-gradient(circle at top right, rgba(196, 108, 71, 0.08), transparent 32%),
+    linear-gradient(180deg, #f9f3ea 0%, #f4efe5 55%, #f1ebde 100%);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--teal);
+  color: white;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
