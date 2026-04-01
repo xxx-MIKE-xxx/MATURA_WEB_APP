@@ -133,7 +133,57 @@ export type ImportJob = {
   createdAt: string;
 };
 
-const TODAY = new Date("2026-03-31T09:00:00.000Z");
+export type TaskMixItem = {
+  label: string;
+  count: number;
+  share: number;
+};
+
+export type SubjectInsight = {
+  code: SubjectCode;
+  name: string;
+  shortName: string;
+  accent: string;
+  accentSoft: string;
+  readiness: number;
+  predictedScore: number;
+  rangeLow: number;
+  rangeHigh: number;
+  confidenceLabel: string;
+  confidenceValue: number;
+  trend: number;
+  consistency: number;
+  dueReviews: number;
+  streak: number;
+  accuracy: number;
+  avgResponseTimeSec: number;
+  hintDependency: number;
+  calibration: number;
+  studyHours: number;
+  reviewCompletionRate: number;
+  urgentConceptCount: number;
+  bestNextStep: string;
+  weakestConcept: ConceptProgress;
+  strongestConcept: ConceptProgress;
+  taskMix: TaskMixItem[];
+};
+
+export type OverallInsight = {
+  readiness: number;
+  predictedScore: number;
+  rangeLow: number;
+  rangeHigh: number;
+  confidenceLabel: string;
+  confidenceValue: number;
+  dueReviews: number;
+  accuracy: number;
+  studyHours: number;
+  reviewCompletionRate: number;
+  consistency: number;
+  streak: number;
+};
+
+const TODAY = new Date("2026-04-01T09:00:00.000Z");
 const EXAM_WINDOW = new Date("2026-05-05T08:00:00.000Z");
 
 const subjects: Subject[] = [
@@ -842,6 +892,14 @@ function average(values: number[]) {
   return values.reduce((total, value) => total + value, 0) / values.length;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function sum(values: number[]) {
+  return values.reduce((total, value) => total + value, 0);
+}
+
 function deterministicNoise(seed: string) {
   return (
     [...seed].reduce((total, char, index) => total + char.charCodeAt(0) * (index + 1), 0) %
@@ -932,6 +990,169 @@ function buildPriority(task: StudyTask, input: SessionInput, alreadySelected: St
   };
 }
 
+function getTrend(series: AnalyticsPoint[]) {
+  if (series.length < 2) {
+    return 0;
+  }
+
+  return series.at(-1)!.value - series.at(-2)!.value;
+}
+
+function getVolatility(series: AnalyticsPoint[]) {
+  if (series.length < 2) {
+    return 0;
+  }
+
+  const deltas = series.slice(1).map((point, index) =>
+    Math.abs(point.value - series[index].value),
+  );
+
+  return average(deltas);
+}
+
+function getTaskMix(subjectCode?: SubjectCode) {
+  const scopedTasks = getTasks(subjectCode);
+  const labels: Record<AnswerMode, string> = {
+    mcq: "MCQ",
+    numeric: "Numeric",
+    short_text: "Short text",
+    essay: "Writing",
+    oral: "Oral",
+  };
+
+  const total = scopedTasks.length || 1;
+
+  return (Object.keys(labels) as AnswerMode[])
+    .map((answerMode) => {
+      const count = scopedTasks.filter((task) => task.answerMode === answerMode).length;
+
+      return {
+        label: labels[answerMode],
+        count,
+        share: Math.round((count / total) * 100),
+      };
+    })
+    .filter((item) => item.count > 0);
+}
+
+function getSubjectInsight(subjectCode: SubjectCode): SubjectInsight {
+  const subject = getSubjectByCode(subjectCode);
+  const concepts = getSubjectConcepts(subjectCode);
+  const series = analyticsSeries[subjectCode];
+  const weakestConcept = getWeakestConcepts(1, subjectCode)[0];
+  const strongestConcept = concepts
+    .slice()
+    .sort(
+      (left, right) =>
+        right.masteryScore + right.stabilityScore - (left.masteryScore + left.stabilityScore),
+    )[0];
+
+  const accuracy = Math.round(
+    (sum(concepts.map((concept) => concept.lifetimeSuccesses)) /
+      Math.max(sum(concepts.map((concept) => concept.lifetimeAttempts)), 1)) *
+      100,
+  );
+  const stability = average(concepts.map((concept) => concept.stabilityScore)) * 100;
+  const calibration = Math.round(
+    average(concepts.map((concept) => concept.confidenceCalibrationScore)) * 100,
+  );
+  const confidenceValue = Math.round(stability * 0.58 + calibration * 0.42);
+  const trend = getTrend(series);
+  const volatility = getVolatility(series);
+  const predictedScore = clamp(
+    Math.round(subject.readiness * 0.72 + confidenceValue * 0.18 + trend * 1.2),
+    35,
+    96,
+  );
+  const rangeRadius = clamp(Math.round(13 - confidenceValue / 10 + volatility / 2), 4, 11);
+  const reviewCompletionRate = clamp(
+    Math.round(74 + subject.streak * 1.8 - subject.dueReviews * 1.4 + confidenceValue * 0.12),
+    58,
+    98,
+  );
+  const consistency = clamp(
+    Math.round(100 - volatility * 3.2 - subject.dueReviews * 1.8 + subject.streak),
+    42,
+    96,
+  );
+  const hintDependency = Math.round(
+    average(concepts.map((concept) => concept.hintDependencyScore)) * 100,
+  );
+  const avgResponseTimeSec = Math.round(
+    average(concepts.map((concept) => concept.avgResponseTimeSec)),
+  );
+  const studyHours = Number(
+    (
+      sum(
+        concepts.map(
+          (concept) => (concept.lifetimeAttempts * concept.avgResponseTimeSec) / 3600,
+        ),
+      ) * 1.25
+    ).toFixed(1),
+  );
+  const urgentConceptCount = getDueConcepts(subjectCode).length;
+
+  return {
+    code: subject.code,
+    name: subject.name,
+    shortName: subject.shortName,
+    accent: subject.accent,
+    accentSoft: subject.accentSoft,
+    readiness: subject.readiness,
+    predictedScore,
+    rangeLow: clamp(predictedScore - rangeRadius, 30, 95),
+    rangeHigh: clamp(predictedScore + rangeRadius, 34, 99),
+    confidenceLabel:
+      confidenceValue >= 72 ? "High confidence" : confidenceValue >= 56 ? "Steady" : "Building",
+    confidenceValue,
+    trend,
+    consistency,
+    dueReviews: subject.dueReviews,
+    streak: subject.streak,
+    accuracy,
+    avgResponseTimeSec,
+    hintDependency,
+    calibration,
+    studyHours,
+    reviewCompletionRate,
+    urgentConceptCount,
+    bestNextStep: `Tighten ${weakestConcept.name.toLowerCase()} before the next timed block.`,
+    weakestConcept,
+    strongestConcept,
+    taskMix: getTaskMix(subjectCode),
+  };
+}
+
+function getOverallInsight(subjectInsights: SubjectInsight[]): OverallInsight {
+  const readiness = Math.round(average(subjectInsights.map((subject) => subject.readiness)));
+  const predictedScore = Math.round(
+    average(subjectInsights.map((subject) => subject.predictedScore)),
+  );
+  const rangeLow = Math.round(average(subjectInsights.map((subject) => subject.rangeLow)));
+  const rangeHigh = Math.round(average(subjectInsights.map((subject) => subject.rangeHigh)));
+  const confidenceValue = Math.round(
+    average(subjectInsights.map((subject) => subject.confidenceValue)),
+  );
+
+  return {
+    readiness,
+    predictedScore,
+    rangeLow,
+    rangeHigh,
+    confidenceLabel:
+      confidenceValue >= 72 ? "High confidence" : confidenceValue >= 56 ? "Steady" : "Building",
+    confidenceValue,
+    dueReviews: sum(subjectInsights.map((subject) => subject.dueReviews)),
+    accuracy: Math.round(average(subjectInsights.map((subject) => subject.accuracy))),
+    studyHours: Number(sum(subjectInsights.map((subject) => subject.studyHours)).toFixed(1)),
+    reviewCompletionRate: Math.round(
+      average(subjectInsights.map((subject) => subject.reviewCompletionRate)),
+    ),
+    consistency: Math.round(average(subjectInsights.map((subject) => subject.consistency))),
+    streak: Math.max(...subjectInsights.map((subject) => subject.streak)),
+  };
+}
+
 export function getSubjects() {
   return subjects;
 }
@@ -1017,7 +1238,13 @@ export function getCountdownDays() {
   );
 }
 
+export function getSubjectInsights() {
+  return subjects.map((subject) => getSubjectInsight(subject.code));
+}
+
 export function getDashboardSnapshot() {
+  const subjectInsights = getSubjectInsights();
+  const overall = getOverallInsight(subjectInsights);
   const recommended = planAdaptiveSession({
     subjectCode: "math",
     mode: "practice",
@@ -1027,7 +1254,10 @@ export function getDashboardSnapshot() {
 
   return {
     countdownDays: getCountdownDays(),
+    overall,
     recommended,
+    subjectInsights,
+    nextAction: `Clear ${recommended.subject.name} ${recommended.mode} first, then switch to your weakest written skill.`,
     dueConcepts: getDueConcepts(),
     weakestConcepts: getWeakestConcepts(),
     recentMistakes: getRecentMistakes(),
@@ -1186,10 +1416,27 @@ export function evaluateTaskAnswer(
 }
 
 export function getAnalyticsSnapshot() {
+  const subjectInsights = getSubjectInsights();
+  const overall = getOverallInsight(subjectInsights);
+  const labels = analyticsSeries.math.map((point) => point.label);
+
   return {
+    overall,
+    subjectInsights,
     subjectSeries: analyticsSeries,
     mostDelayed: getDueConcepts().slice(0, 5),
     strongestSubjects: subjects.slice().sort((left, right) => right.readiness - left.readiness),
+    taskMix: getTaskMix(),
+    scoreHistory: labels.map((label) => ({
+      label,
+      value: Math.round(
+        average(
+          Object.values(analyticsSeries).map(
+            (series) => series.find((point) => point.label === label)?.value ?? 0,
+          ),
+        ),
+      ),
+    })),
   };
 }
 

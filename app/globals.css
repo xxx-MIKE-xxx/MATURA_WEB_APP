@@ -2,30 +2,47 @@
 
 :root {
   --background: #f4efe5;
+  --shell: #f0e8db;
   --surface: #efe5d7;
   --surface-strong: #fffdf8;
   --foreground: #181411;
   --muted: #6c6258;
+  --muted-strong: #5a5047;
   --line: #d3c2af;
+  --line-strong: #c7b39a;
+  --line-emphasis: #9c8770;
   --teal: #0f6d67;
   --teal-soft: #d7ede8;
   --navy: #1b2d43;
   --coral: #c46c47;
   --olive: #69744f;
+  --warning: #a3562f;
+  --warning-soft: #f3ddd3;
+  --success-soft: #dcead7;
+  --panel-shadow: 0 24px 60px rgba(32, 39, 48, 0.08);
+  --panel-shadow-soft: 0 14px 34px rgba(32, 39, 48, 0.05);
+  --panel-shadow-strong: 0 28px 74px rgba(27, 45, 67, 0.16);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-shell: var(--shell);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-strong: var(--surface-strong);
   --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-line-emphasis: var(--line-emphasis);
   --color-teal: var(--teal);
   --color-teal-soft: var(--teal-soft);
   --color-navy: var(--navy);
   --color-coral: var(--coral);
   --color-olive: var(--olive);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success-soft: var(--success-soft);
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -64,4 +81,51 @@ a {
 
 .font-mono {
   font-family: var(--font-mono);
+}
+
+.app-button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f6d67 0%, #165a7a 100%);
+  color: white;
+  padding: 0.85rem 1.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 18px 34px rgba(15, 109, 103, 0.22);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+.app-button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 44px rgba(15, 109, 103, 0.28);
+}
+
+.app-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--foreground);
+  padding: 0.85rem 1.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.app-button-secondary:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-emphasis);
+  background: rgba(255, 255, 255, 0.95);
 }

@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { getStudyModes, getSubjects, planAdaptiveSession } from "@/lib/matura-data";
+import { PageHero } from "@/components/page-hero";
+import { ReadinessCard } from "@/components/readiness-card";
+import { getStudyModes, getSubjectInsights, planAdaptiveSession } from "@/lib/matura-data";
 
 export default function StudyBuilderPage() {
-  const subjects = getSubjects();
+  const subjectInsights = getSubjectInsights();
   const modes = getStudyModes();
   const recommended = planAdaptiveSession({
     subjectCode: "math",
@@ -12,74 +14,115 @@ export default function StudyBuilderPage() {
   });
 
   return (
-    <div className="grid gap-8">
-      <section className="rounded-[34px] border border-[var(--line)] bg-[var(--surface-strong)] p-6 sm:p-8">
-        <p className="text-xs uppercase tracking-[0.35em] text-[var(--muted)]">Study builder</p>
-        <h1 className="mt-4 font-display text-5xl text-[var(--foreground)]">
-          Compose a session by subject, mode, pacing, and topic focus.
-        </h1>
-        <p className="mt-4 max-w-3xl text-sm leading-8 text-[var(--muted)]">
-          The planner applies constrained randomness. You get variety, but not chaos:
-          overdue concepts, confusable neighbors, and difficulty band control all influence
-          the next task.
-        </p>
+    <div className="grid gap-6 lg:gap-8">
+      <PageHero
+        eyebrow="Study builder"
+        title="Choose today’s subject first. The rest of the session should support that choice, not compete with it."
+        description="Pick the subject you want to move right now. Each card shows predicted score, confidence, and the cleanest next step."
+        aside={
+          <div className="rounded-[28px] border border-[var(--line-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(239,229,215,0.86))] p-5 shadow-[var(--panel-shadow-soft)]">
+            <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-strong)]">
+              Quick start
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold text-[var(--foreground)]">
+              {recommended.subject.name} {recommended.mode}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+              {recommended.taskCount} tasks • {recommended.durationMinutes} minutes •{" "}
+              {recommended.summary.pacingLabel.toLowerCase()}
+            </p>
+            <Link
+              href="/app/study/session/recommended?subject=math&mode=practice&count=4"
+              className="app-button-primary mt-5"
+            >
+              Launch recommended block
+            </Link>
+          </div>
+        }
+      />
+
+      <section className="grid gap-5 xl:grid-cols-3">
+        {subjectInsights.map((insight) => (
+          <ReadinessCard
+            key={insight.code}
+            insight={insight}
+            href={`/app/study/session/${insight.code}?subject=${insight.code}&mode=practice&count=4`}
+            emphasis="strong"
+          />
+        ))}
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[30px] border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-5">
-          <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">
-            Recommended block
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold text-[var(--foreground)]">
-            {recommended.subject.name} {recommended.mode}
-          </h2>
+        <div className="rounded-[30px] border border-[var(--line-strong)] bg-[linear-gradient(180deg,rgba(255,251,244,0.98),rgba(239,229,215,0.96))] p-6 shadow-[var(--panel-shadow)]">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-strong)]">
+                Recommended plan
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--foreground)]">
+                {recommended.subject.name} practice block
+              </h2>
+            </div>
+            <span className="rounded-full bg-[var(--teal-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--teal)]">
+              Start here if unsure
+            </span>
+          </div>
+
           <div className="mt-5 grid gap-3">
             {recommended.tasks.map((task) => (
-              <div key={task.id} className="rounded-[22px] bg-[var(--surface)] px-4 py-4">
-                <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
-                <p className="mt-2 text-sm text-[var(--muted)]">{task.reasons.join(" • ")}</p>
+              <div
+                key={task.id}
+                className="rounded-[22px] border border-[var(--line)] bg-white/82 px-4 py-4"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
+                    <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                      {task.reasons.join(" • ")}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-[var(--foreground)]">
+                    {task.difficultyBase}/10
+                  </span>
+                </div>
               </div>
             ))}
           </div>
-          <Link
-            href="/app/study/session/recommended?subject=math&mode=practice&count=4"
-            className="mt-5 inline-flex rounded-full bg-[var(--teal)] px-5 py-3 text-sm font-semibold text-white"
-          >
-            Launch this session
-          </Link>
         </div>
 
         <div className="grid gap-5">
-          <div className="rounded-[30px] border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-5">
-            <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Subjects</p>
-            <div className="mt-4 grid gap-3">
-              {subjects.map((subject) => (
-                <Link
-                  key={subject.code}
-                  href={`/app/study/session/${subject.code}?subject=${subject.code}&mode=practice&count=4`}
-                  className="rounded-[22px] border border-[var(--line)] px-4 py-4 transition hover:border-[var(--teal)]"
-                >
-                  <p className="font-semibold text-[var(--foreground)]">{subject.name}</p>
-                  <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                    {subject.focusDescription}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-5">
-            <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted)]">Modes</p>
+          <div className="rounded-[30px] border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-[var(--panel-shadow-soft)]">
+            <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-strong)]">
+              Modes
+            </p>
             <div className="mt-4 grid gap-3">
               {modes.map((mode) => (
                 <div key={mode.id} className="rounded-[22px] bg-[var(--surface)] px-4 py-4">
-                  <p className="font-semibold text-[var(--foreground)]">{mode.name}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="font-semibold text-[var(--foreground)]">{mode.name}</p>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--muted-strong)]">
+                      {mode.id}
+                    </span>
+                  </div>
                   <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
                     {mode.description}
                   </p>
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="rounded-[30px] border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-[var(--panel-shadow-soft)]">
+            <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-strong)]">
+              Planner note
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
+              Why the order changes
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+              The planner rotates between urgency, weak concepts, and task contrast. That
+              keeps the session focused without locking you into one repetitive format.
+            </p>
           </div>
         </div>
       </section>
