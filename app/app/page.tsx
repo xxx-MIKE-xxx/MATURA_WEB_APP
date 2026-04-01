@@ -64,16 +64,7 @@ export default function DashboardPage() {
         }
       />
 
-      <section className="grid gap-5 xl:grid-cols-3">
-        {snapshot.subjectInsights.map((insight) => (
-          <ReadinessCard
-            key={insight.code}
-            insight={insight}
-            href={`/app/study/session/${insight.code}?subject=${insight.code}&mode=practice&count=4`}
-          />
-        ))}
-      </section>
-
+      {/* Bring the next action and due review cards directly under the hero so that the most important actions are seen first. */}
       <section className="grid gap-5 lg:grid-cols-[1.08fr_0.92fr]">
         <div className="rounded-[30px] border border-[var(--line-strong)] bg-[linear-gradient(180deg,rgba(255,251,244,0.98),rgba(239,229,215,0.96))] p-6 shadow-[var(--panel-shadow)]">
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-strong)]">
@@ -112,7 +103,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-strong)]">
-                Urgent review queue
+                Review queue
               </p>
               <h2 className="mt-3 text-3xl font-semibold text-[var(--foreground)]">
                 Due reviews
@@ -144,6 +135,18 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* Subject overview comes after the primary actions. Present the subject cards as a compact comparison. */}
+      <section className="grid gap-5 xl:grid-cols-3">
+        {snapshot.subjectInsights.map((insight) => (
+          <ReadinessCard
+            key={insight.code}
+            insight={insight}
+            href={`/app/study/session/${insight.code}?subject=${insight.code}&mode=practice&count=4`}
+          />
+        ))}
+      </section>
+
+      {/* The analytics section (weakest concepts and mistake patterns) comes last to avoid competing with the key actions. */}
       <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-[30px] border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-[var(--panel-shadow-soft)]">
           <div className="flex items-center justify-between gap-4">
