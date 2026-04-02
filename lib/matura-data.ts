@@ -900,88 +900,109 @@ function sum(values: number[]) {
   return values.reduce((total, value) => total + value, 0);
 }
 
-function deterministicNoise(seed: string) {
-  return (
-    [...seed].reduce((total, char, index) => total + char.charCodeAt(0) * (index + 1), 0) %
-    11
-  );
-}
+const RETENTION_HORIZON_DAYS = 14;
 
 function sharedConceptCount(left: string[], right: string[]) {
   const rightSet = new Set(right);
   return left.filter((item) => rightSet.has(item)).length;
 }
 
-function buildPriority(task: StudyTask, input: SessionInput, alreadySelected: StudyTask[]) {
-  const progress = task.conceptIds.map(getConceptById);
-  const history = getTaskHistory(task.id);
-  const averageMastery = average(progress.map((item) => item.masteryScore));
-  const averageHintDependency = average(progress.map((item) => item.hintDependencyScore));
-  const dueScore = Math.max(...progress.map((item) => Math.max(daysBetween(item.nextDueAt), 0) * 3), 0);
-  const weaknessScore = Math.round((1 - averageMastery + averageHintDependency) * 18);
-  const examImportanceScore =
+function getElapsedDays(date?: string) {
+  if (!date) {
+    return 0;
+  }
+
+  return Math.max(daysBetween(date), 0);
+}
+
+function getConceptForgettingProbability(concept: ConceptProgress) {
+  const elapsedDays = getElapsedDays(concept.lastSeenAt);
+  const stabilityDays = Math.max(1, concept.stabilityScore * RETENTION_HORIZON_DAYS);
+  const retention = Math.exp(-elapsedDays / stabilityDays);
+
+  return clamp(1 - retention, 0, 1);
+}
+
+function getTaskForgettingScore(progress: ConceptProgress[]) {
+  return average(progress.map((concept) => getConceptForgettingProbability(concept)));
+}
+
+function getTaskWeaknessScore(progress: ConceptProgress[]) {
+  return average(
+    progress.map((concept) =>
+      clamp(
+        ((1 - concept.masteryScore) +
+          (1 - concept.stabilityScore) +
+          concept.hintDependencyScore) /
+          3,
+        0,
+        1,
+      ),
+    ),
+  );
+}
+
+function getTaskExamImportanceScore(task: StudyTask) {
+  const averageRequirementWeight =
     task.requirementCodes.reduce(
       (total, requirement) => total + (requirementWeights[requirement] ?? 6),
       0,
-    ) /
-      Math.max(task.requirementCodes.length, 1) +
-    (task.official ? 3 : 0);
+    ) / Math.max(task.requirementCodes.length, 1);
 
-  const previousTask = alreadySelected.at(-1);
-  const discriminationScore = previousTask
-    ? previousTask.topic !== task.topic
-      ? 6
-      : sharedConceptCount(previousTask.conceptIds, task.conceptIds) === 0
-        ? 4
-        : 0
-    : 4;
+  return clamp(averageRequirementWeight / 10 + (task.official ? 0.1 : 0), 0, 1);
+}
 
-  const freshnessBonus = history ? Math.max(5 - history.timesSeen, 0) : 7;
-  const unfinishedGoalBonus =
-    input.topics && input.topics.length > 0
-      ? input.topics.some(
-          (topic) => topic.toLowerCase() === task.topic.toLowerCase(),
-        )
-        ? 6
-        : -3
-      : 2;
+function getInterleavingBenefit(task: StudyTask, previousTask?: StudyTask) {
+  if (!previousTask) {
+    return 0.5;
+  }
 
-  const repetitionPenalty = previousTask
-    ? sharedConceptCount(previousTask.conceptIds, task.conceptIds) > 0
-      ? 8
-      : 0
-    : 0;
+  const sharedConcepts = sharedConceptCount(previousTask.conceptIds, task.conceptIds);
 
-  const [bandMin, bandMax] = difficultyBands[input.mode];
-  const overloadPenalty =
+  if (sharedConcepts > 0) {
+    return 0;
+  }
+
+  if (previousTask.topic === task.topic) {
+    return 0.5;
+  }
+
+  return 1;
+}
+
+function getDifficultyPenalty(task: StudyTask, mode: StudyMode) {
+  const [bandMin, bandMax] = difficultyBands[mode];
+  const distance =
     task.difficultyBase < bandMin
       ? bandMin - task.difficultyBase
       : task.difficultyBase > bandMax
         ? task.difficultyBase - bandMax
         : 0;
 
-  const recentPenalty =
-    history && history.lastSeenAt && Math.abs(daysBetween(history.lastSeenAt)) <= 3 ? 6 : 0;
+  return clamp(distance / 10, 0, 1);
+}
+
+function buildPriority(task: StudyTask, input: SessionInput, alreadySelected: StudyTask[]) {
+  const progress = task.conceptIds.map(getConceptById);
+  const forgettingScore = getTaskForgettingScore(progress);
+  const weaknessScore = getTaskWeaknessScore(progress);
+  const examImportanceScore = getTaskExamImportanceScore(task);
+
+  const previousTask = alreadySelected.at(-1);
+  const interleavingBenefit = getInterleavingBenefit(task, previousTask);
+  const difficultyPenalty = getDifficultyPenalty(task, input.mode);
 
   const priorityScore =
-    dueScore +
-    weaknessScore +
-    examImportanceScore +
-    discriminationScore +
-    freshnessBonus +
-    unfinishedGoalBonus -
-    repetitionPenalty -
-    overloadPenalty * 4 -
-    recentPenalty +
-    deterministicNoise(task.id) / 10;
+    ((forgettingScore + weaknessScore + examImportanceScore + interleavingBenefit) / 4 -
+      difficultyPenalty * 0.25) *
+    100;
 
   const reasons = [
-    dueScore >= 6 ? "Concept is overdue for retrieval" : "",
-    weaknessScore >= 10 ? "Weakness score is elevated from recent misses" : "",
-    discriminationScore >= 4 ? "Improves interleaving against the previous task" : "",
-    freshnessBonus >= 6 ? "Fresh item with low recent exposure" : "",
-    unfinishedGoalBonus >= 5 ? "Aligned to the selected topic focus" : "",
-    overloadPenalty > 0 ? "Slightly outside the target difficulty band" : "",
+    forgettingScore >= 0.55 ? "Memory is likely fading and ready for retrieval" : "",
+    weaknessScore >= 0.55 ? "Concept remains unstable and needs reinforcement" : "",
+    interleavingBenefit >= 0.75 ? "Adds contrast against the previous task" : "",
+    examImportanceScore >= 0.75 ? "High-value exam requirement" : "",
+    difficultyPenalty > 0 ? "Slightly outside the target difficulty band" : "",
   ].filter(Boolean);
 
   return {
