@@ -1,5 +1,6 @@
 import { SessionPlayer } from "@/components/session-player";
-import { getSubjects, planAdaptiveSession, type SubjectCode, type StudyMode } from "@/lib/matura-data";
+import type { StudyMode, SubjectCode } from "@/lib/domain/study-types";
+import { planStudySession } from "@/lib/features/study/service";
 
 type SessionPageProps = {
   params: Promise<{ sessionId: string }>;
@@ -13,7 +14,7 @@ export default async function SessionPage({ params, searchParams }: SessionPageP
   const count = query.count;
   const duration = query.duration;
 
-  const validSubjects = new Set(getSubjects().map((item) => item.code));
+  const validSubjects = new Set<SubjectCode>(["math", "english", "polish", "physics"]);
   const subjectCode =
     typeof subject === "string" && validSubjects.has(subject as SubjectCode)
       ? (subject as SubjectCode)
@@ -24,7 +25,7 @@ export default async function SessionPage({ params, searchParams }: SessionPageP
       ? (mode as StudyMode)
       : "practice";
 
-  const session = planAdaptiveSession({
+  const session = await planStudySession({
     subjectCode,
     mode: studyMode,
     taskCount: typeof count === "string" ? Number(count) : undefined,

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { getStudyModes, getSubjects } from "@/lib/matura-data";
+import { getStudyModes } from "@/lib/matura-data";
 import { SupabaseStatus } from "@/components/supabase-status";
+import { getAvailableSubjects } from "@/lib/features/study/service";
 
-export default function HomePage() {
-  const subjects = getSubjects();
+export default async function HomePage() {
+  const subjects = await getAvailableSubjects();
   const modes = getStudyModes();
 
   return (
@@ -18,7 +19,7 @@ export default function HomePage() {
                 Atlas Matura
               </p>
               <p className="mt-2 text-sm text-white/72">
-                Adaptive exam prep for math, Polish, and English
+                Adaptive exam prep for math, physics, Polish, and English
               </p>
             </div>
             <nav className="flex flex-wrap items-center gap-4 text-sm text-white/78">

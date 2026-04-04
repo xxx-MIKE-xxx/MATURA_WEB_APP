@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Kinematics interval table</title>
+  <desc id="desc">A summary table of time intervals, graph shape, and displacement contributions for a velocity-time graph task.</desc>
+  <rect width="1200" height="520" fill="#fbf6ef" rx="34" />
+  <g transform="translate(70 60)">
+    <rect x="0" y="0" width="1060" height="390" rx="30" fill="#fffdf9" stroke="#d8ccb8" stroke-width="2" />
+    <rect x="0" y="0" width="1060" height="84" rx="30" fill="#efe2d4" />
+    <rect x="0" y="84" width="1060" height="1" fill="#d8ccb8" />
+    <rect x="0" y="182" width="1060" height="1" fill="#e5dacb" />
+    <rect x="0" y="280" width="1060" height="1" fill="#e5dacb" />
+    <g fill="#d8ccb8">
+      <rect x="245" y="0" width="1" height="390" />
+      <rect x="500" y="0" width="1" height="390" />
+      <rect x="790" y="0" width="1" height="390" />
+    </g>
+    <g fill="#5a4a3d" font-family="Arial, sans-serif" font-size="24" font-weight="700">
+      <text x="32" y="52">Interval</text>
+      <text x="278" y="52">Graph shape</text>
+      <text x="534" y="52">Velocity detail</text>
+      <text x="824" y="52">Displacement</text>
+    </g>
+    <g fill="#2d3138" font-family="Arial, sans-serif" font-size="25">
+      <text x="34" y="145">0-2 s</text>
+      <text x="34" y="243">2-4 s</text>
+      <text x="34" y="341">4-6 s</text>
+    </g>
+    <g fill="#6d5443" font-family="Arial, sans-serif" font-size="23">
+      <text x="278" y="145">Triangle</text>
+      <text x="278" y="243">Rectangle</text>
+      <text x="278" y="341">Triangle</text>
+      <text x="534" y="145">0 to 4 m/s</text>
+      <text x="534" y="243">4 m/s constant</text>
+      <text x="534" y="341">4 to 0 m/s</text>
+      <text x="824" y="145">1/2 * 2 * 4 = 4 m</text>
+      <text x="824" y="243">2 * 4 = 8 m</text>
+      <text x="824" y="341">1/2 * 2 * 6 = 6 m</text>
+    </g>
+    <rect x="28" y="355" width="1000" height="1" fill="#d8ccb8" />
+    <text x="32" y="400" fill="#8b4f27" font-family="Arial, sans-serif" font-size="28" font-weight="700">Total displacement = 18 m</text>
+  </g>
+</svg>

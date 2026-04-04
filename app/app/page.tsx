@@ -29,7 +29,7 @@ function MetricTile({
         : "text-[var(--foreground)]";
 
   return (
-    <div className="rounded-[24px] border border-[var(--line)] bg-white/72 px-4 py-4 backdrop-blur-sm">
+    <div className="rounded-[24px] border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-[var(--panel-shadow-soft)] backdrop-blur-sm">
       <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--muted-strong)]">
         {label}
       </p>
@@ -40,6 +40,7 @@ function MetricTile({
     </div>
   );
 }
+
 
 function SubjectOverviewCard({
   insight,
@@ -52,10 +53,7 @@ function SubjectOverviewCard({
   return (
     <Link
       href={`/app/study/session/${insight.code}?subject=${insight.code}&mode=practice&count=4`}
-      className="group rounded-[28px] border border-[var(--line)] bg-white/78 p-5 shadow-[var(--panel-shadow-soft)] transition-transform duration-200 hover:-translate-y-[1px] hover:border-[var(--line-strong)]"
-      style={{
-        boxShadow: "var(--panel-shadow-soft)",
-      }}
+      className="group overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--surface-strong)] p-5 shadow-[var(--panel-shadow-soft)] transition duration-200 hover:-translate-y-[1px] hover:border-[var(--line-strong)] hover:shadow-[0_28px_64px_rgba(27,45,67,0.12)]"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -136,7 +134,7 @@ function QueueItem({
   badge: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-[22px] border border-[var(--line)] bg-white/72 px-4 py-4">
+    <div className="flex items-start justify-between gap-4 rounded-[24px] border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-[var(--panel-shadow-soft)]">
       <div>
         <p className="font-semibold text-[var(--foreground)]">{title}</p>
         <p className="mt-1 text-sm text-[var(--muted)]">{meta}</p>
@@ -182,9 +180,10 @@ export default function DashboardPage() {
   const recommendedTasks = snapshot.recommended.tasks.slice(0, 3);
 
   return (
-    <div className="mx-auto grid max-w-[1480px] gap-6 lg:gap-8">
-      {/* HERO: one screen = one primary action */}
-      <section className="overflow-hidden rounded-[36px] border border-[var(--line-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,244,237,0.96))] shadow-[var(--panel-shadow)]">
+    <div className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="grid gap-6 lg:gap-8">
+        {/* HERO: one screen = one primary action */}
+        <section className="overflow-hidden rounded-[36px] border border-[var(--line-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,242,233,0.95))] shadow-[var(--panel-shadow)]">
         <div className="grid gap-0 xl:grid-cols-[1.4fr_0.8fr]">
           <div className="p-7 sm:p-8 lg:p-10">
             <SectionLabel>Today</SectionLabel>
@@ -259,7 +258,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Right rail: compact status, not competing with primary action */}
-          <aside className="border-t border-[var(--line)] bg-[rgba(245,240,232,0.68)] p-6 sm:p-7 xl:border-l xl:border-t-0">
+          <aside className="border-t border-[var(--line)] bg-[var(--shell)] p-6 sm:p-7 xl:border-l xl:border-t-0">
             <SectionLabel>Exam snapshot</SectionLabel>
 
             <div className="mt-4 rounded-[28px] border border-[var(--line)] bg-white/76 p-5">
@@ -392,6 +391,7 @@ export default function DashboardPage() {
           </div>
         </SecondaryInsightCard>
       </section>
+     </div>
     </div>
   );
 }

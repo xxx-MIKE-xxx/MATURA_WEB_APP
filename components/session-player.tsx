@@ -3,11 +3,18 @@
 import { startTransition, useEffect, useEffectEvent, useMemo, useState } from "react";
 import {
   evaluateTaskAnswer,
-  type ConfidenceLevel,
-  type PlannedSession,
-  type StudyTask,
-  type AttemptEvaluation,
-} from "@/lib/matura-data";
+  getAnswerModeLabel,
+  isEssayStyleMode,
+  isOptionMode,
+} from "@/lib/domain/study-logic";
+import type {
+  AttemptEvaluation,
+  ConfidenceLevel,
+  PlannedSession,
+  StudyTask,
+} from "@/lib/domain/study-types";
+import { persistStudyAttempt } from "@/lib/features/study/answer-evaluation";
+import { getBrowserSupabaseClient } from "@/lib/supabase";
 
 type SessionPlayerProps = {
   session: PlannedSession;
@@ -22,7 +29,7 @@ function TaskAnswerInput({
   answer: string;
   onChange: (value: string) => void;
 }) {
-  if (task.answerMode === "mcq" && task.options) {
+  if (isOptionMode(task.answerMode) && task.options && task.options.length > 0) {
     return (
       <div className="grid gap-3">
         {task.options.map((option) => (
@@ -45,22 +52,31 @@ function TaskAnswerInput({
     );
   }
 
-  const rows = task.answerMode === "essay" || task.answerMode === "oral" ? 7 : 3;
+  const rows = isEssayStyleMode(task.answerMode) ? 7 : 3;
 
   return (
-    <textarea
-      value={answer}
-      onChange={(event) => onChange(event.target.value)}
-      rows={rows}
-      className="w-full rounded-[28px] border border-[var(--line)] bg-white px-4 py-4 text-sm leading-7 outline-none transition focus:border-[var(--teal)]"
-      placeholder={
-        task.answerMode === "numeric"
-          ? "Type a number"
-          : task.answerMode === "short_text"
-            ? "Type a short answer"
-            : "Draft your response"
-      }
-    />
+    <div className="grid gap-3">
+      {isOptionMode(task.answerMode) ? (
+        <p className="rounded-[22px] border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm leading-7 text-[var(--muted)]">
+          Official option data is not modeled for this task yet. Enter your conclusion, then
+          compare it against the official solution after submission.
+        </p>
+      ) : null}
+
+      <textarea
+        value={answer}
+        onChange={(event) => onChange(event.target.value)}
+        rows={rows}
+        className="w-full rounded-[28px] border border-[var(--line)] bg-white px-4 py-4 text-sm leading-7 outline-none transition focus:border-[var(--teal)]"
+        placeholder={
+          task.answerMode === "numeric"
+            ? "Type a number"
+            : task.answerMode === "short_text" || task.answerMode === "fill_in"
+              ? "Type a short answer"
+              : "Draft your response"
+        }
+      />
+    </div>
   );
 }
 
@@ -71,7 +87,9 @@ export function SessionPlayer({ session }: SessionPlayerProps) {
   const [hintLevel, setHintLevel] = useState(0);
   const [scratchpad, setScratchpad] = useState("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [taskStartedAtElapsed, setTaskStartedAtElapsed] = useState(0);
   const [results, setResults] = useState<Record<string, AttemptEvaluation>>({});
+  const [persistenceStatus, setPersistenceStatus] = useState<Record<string, string>>({});
 
   const currentTask = session.tasks[currentIndex];
   const currentResult = currentTask ? results[currentTask.id] : undefined;
@@ -107,7 +125,31 @@ export function SessionPlayer({ session }: SessionPlayerProps) {
   }, [results]);
 
   function revealHint() {
+    if (!currentTask) {
+      return;
+    }
+
     setHintLevel((value) => Math.min(value + 1, currentTask.hints.length));
+  }
+
+  async function persistAttempt(task: StudyTask, evaluation: AttemptEvaluation) {
+    const client = getBrowserSupabaseClient();
+    const sessionData = client ? await client.auth.getSession() : null;
+    const accessToken = sessionData?.data.session?.access_token;
+    const response = await persistStudyAttempt({
+      accessToken,
+      taskId: task.id,
+      answer,
+      confidence,
+      hintLevel,
+      responseTimeSec: Math.max(1, elapsedSeconds - taskStartedAtElapsed),
+      evaluation,
+    });
+
+    setPersistenceStatus((previous) => ({
+      ...previous,
+      [task.id]: response.message,
+    }));
   }
 
   function submitAnswer() {
@@ -121,6 +163,15 @@ export function SessionPlayer({ session }: SessionPlayerProps) {
       ...previous,
       [currentTask.id]: evaluation,
     }));
+
+    if (currentTask.subjectCode === "physics") {
+      void persistAttempt(currentTask, evaluation).catch(() => {
+        setPersistenceStatus((previous) => ({
+          ...previous,
+          [currentTask.id]: "Physics save failed. Your local review result is still visible.",
+        }));
+      });
+    }
   }
 
   function goToNextTask() {
@@ -129,6 +180,7 @@ export function SessionPlayer({ session }: SessionPlayerProps) {
       setAnswer("");
       setConfidence("medium");
       setHintLevel(0);
+      setTaskStartedAtElapsed(elapsedSeconds);
     });
   }
 
@@ -211,7 +263,7 @@ export function SessionPlayer({ session }: SessionPlayerProps) {
                 {currentTask.topic}
               </span>
               <span className="rounded-full border border-[var(--line)] px-3 py-1 text-xs uppercase tracking-[0.25em] text-[var(--muted)]">
-                {currentTask.taskTypeLabel}
+                {currentTask.taskTypeLabel} • {getAnswerModeLabel(currentTask.answerMode)}
               </span>
             </div>
 
@@ -230,6 +282,50 @@ export function SessionPlayer({ session }: SessionPlayerProps) {
                   {currentTask.stimulus}
                 </p>
               ) : null}
+
+              {currentTask.assetItems && currentTask.assetItems.length > 0 ? (
+                <div className="mt-5 grid gap-4">
+                  {currentTask.assetItems.map((asset) => (
+                    <figure
+                      key={asset.id}
+                      className="overflow-hidden rounded-[24px] border border-[var(--line)] bg-white"
+                    >
+                      {asset.publicUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={asset.publicUrl}
+                          alt={asset.caption ?? `${currentTask.title} asset`}
+                          className="w-full object-contain"
+                        />
+                      ) : null}
+                      {asset.caption ? (
+                        <figcaption className="border-t border-[var(--line)] px-4 py-3 text-sm leading-7 text-[var(--muted)]">
+                          {asset.caption}
+                        </figcaption>
+                      ) : null}
+                    </figure>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.22em] text-[var(--muted-strong)]">
+              {currentTask.conceptIds.map((conceptId) => (
+                <span
+                  key={conceptId}
+                  className="rounded-full bg-[var(--surface)] px-3 py-1 text-[var(--foreground)]"
+                >
+                  {conceptId}
+                </span>
+              ))}
+              {currentTask.requirementCodes.map((requirementCode) => (
+                <span
+                  key={requirementCode}
+                  className="rounded-full border border-[var(--line)] px-3 py-1 text-[var(--muted)]"
+                >
+                  {requirementCode}
+                </span>
+              ))}
             </div>
 
             <TaskAnswerInput task={currentTask} answer={answer} onChange={setAnswer} />
@@ -280,6 +376,11 @@ export function SessionPlayer({ session }: SessionPlayerProps) {
                 <p className="text-sm font-medium text-[var(--teal)]">
                   {currentResult.nextReviewLabel} on {currentResult.nextDueAt}
                 </p>
+                {persistenceStatus[currentTask.id] ? (
+                  <p className="text-sm leading-7 text-[var(--muted)]">
+                    {persistenceStatus[currentTask.id]}
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -332,6 +433,11 @@ export function SessionPlayer({ session }: SessionPlayerProps) {
               </div>
             ))}
           </div>
+          {currentTask?.sourceRef ? (
+            <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+              Source: {currentTask.sourceRef}
+            </p>
+          ) : null}
         </div>
 
         <div>

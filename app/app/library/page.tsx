@@ -1,7 +1,9 @@
 import { LibraryExplorer } from "@/components/library-explorer";
-import { getTasks } from "@/lib/matura-data";
+import { getAvailableSubjects, getTaskLibrary } from "@/lib/features/study/service";
 
-export default function LibraryPage() {
+export default async function LibraryPage() {
+  const [tasks, subjects] = await Promise.all([getTaskLibrary(), getAvailableSubjects()]);
+
   return (
     <div className="grid gap-6">
       <section className="rounded-[34px] border border-[var(--line)] bg-[var(--surface-strong)] p-6 sm:p-8">
@@ -11,7 +13,7 @@ export default function LibraryPage() {
         </h1>
       </section>
 
-      <LibraryExplorer tasks={getTasks()} />
+      <LibraryExplorer tasks={tasks} subjects={subjects} />
     </div>
   );
 }

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { PageHero } from "@/components/page-hero";
 import { ReadinessCard } from "@/components/readiness-card";
 import { getStudyModes, getSubjectInsights, planAdaptiveSession } from "@/lib/matura-data";
+import { getAvailableSubjects } from "@/lib/features/study/service";
 
-export default function StudyBuilderPage() {
+export default async function StudyBuilderPage() {
+  const availableSubjects = await getAvailableSubjects();
   const subjectInsights = getSubjectInsights();
   const modes = getStudyModes();
   const recommended = planAdaptiveSession({
@@ -12,6 +14,7 @@ export default function StudyBuilderPage() {
     durationMinutes: 28,
     taskCount: 4,
   });
+  const physicsSubject = availableSubjects.find((subject) => subject.code === "physics");
 
   return (
     <div className="grid gap-6 lg:gap-8">
@@ -51,6 +54,32 @@ export default function StudyBuilderPage() {
           />
         ))}
       </section>
+
+      {physicsSubject ? (
+        <section className="rounded-[30px] border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-[var(--panel-shadow-soft)]">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-strong)]">
+                Physics pilot
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold text-[var(--foreground)]">
+                Physics now uses the server-backed provider path.
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+                Use the library or start a one-task practice block to verify prompt, assets,
+                official solution, and persistence against Supabase-backed content.
+              </p>
+            </div>
+
+            <Link
+              href="/app/study/session/physics-pilot?subject=physics&mode=practice&count=1"
+              className="app-button-primary"
+            >
+              Open physics pilot
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-[30px] border border-[var(--line-strong)] bg-[linear-gradient(180deg,rgba(255,251,244,0.98),rgba(239,229,215,0.96))] p-6 shadow-[var(--panel-shadow)]">
