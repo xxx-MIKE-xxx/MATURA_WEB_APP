@@ -140,7 +140,6 @@ export type PhysicsAssetRow = {
   position: number;
   page_number: number | null;
   caption: string | null;
-  bucket: string | null;
 };
 
 export type PhysicsImportJobRow = {
@@ -314,7 +313,7 @@ async function buildPhysicsTaskBundles(taskRows: PhysicsTaskRow[]) {
       ? supabase
           .from("assets")
           .select(
-            "id, asset_group_id, storage_path, mime_type, alt_text, width, height, role, position, page_number, caption, bucket",
+            "id, asset_group_id, storage_path, mime_type, alt_text, width, height, role, position, page_number, caption",
           )
           .in("asset_group_id", assetGroupIds)
           .order("asset_group_id", { ascending: true })

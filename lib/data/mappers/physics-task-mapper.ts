@@ -7,6 +7,9 @@ import type {
   PhysicsTaskBundleRow,
 } from "@/lib/data/queries/physics-queries";
 
+const PHYSICS_ASSET_BUCKET =
+  process.env.NEXT_PUBLIC_PHYSICS_ASSET_BUCKET ?? "matura-assets";
+
 export const PHYSICS_SUBJECT_FALLBACK: Subject = {
   code: "physics",
   name: "Fizyka",
@@ -80,7 +83,7 @@ function mapAssets(assets: PhysicsAssetRow[]) {
       pageNumber: asset.page_number,
       position: asset.position,
       caption: asset.caption ?? asset.alt_text,
-      publicUrl: getAssetUrl(asset.storage_path, asset.bucket ?? "assets"),
+      publicUrl: getAssetUrl(asset.storage_path, PHYSICS_ASSET_BUCKET),
     }));
 }
 
