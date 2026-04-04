@@ -84,23 +84,10 @@ function mapAssets(assets: PhysicsAssetRow[]) {
     }));
 }
 
-function getTopicMetadata(task: PhysicsTaskBundleRow["task"]) {
-  const payload = task.payload_json;
-
-  if (!payload || typeof payload !== "object") {
-    return {
-      topicSecondary: null,
-      topicMixed: null,
-    };
-  }
-
-  const topicSecondary =
-    typeof payload.topic_secondary === "string" ? payload.topic_secondary : null;
-  const topicMixed = typeof payload.topic_mixed === "string" ? payload.topic_mixed : null;
-
+function getTopicMetadata() {
   return {
-    topicSecondary,
-    topicMixed,
+    topicSecondary: null,
+    topicMixed: null,
   };
 }
 
@@ -114,7 +101,7 @@ export function mapPhysicsTaskBundleToStudyTask(bundle: PhysicsTaskBundleRow): S
   const correctOption = bundle.options.find((option) => option.is_correct);
   const acceptedAnswers = readAnswerKeyValue<string[]>(answerKey, "accepted");
   const numericTolerance = readAnswerKeyValue<number>(answerKey, "tolerance");
-  const { topicSecondary, topicMixed } = getTopicMetadata(bundle.task);
+  const { topicSecondary, topicMixed } = getTopicMetadata();
 
   return {
     id: bundle.task.id,

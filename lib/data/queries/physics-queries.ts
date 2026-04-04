@@ -88,7 +88,6 @@ export type PhysicsTaskRow = {
   official: boolean;
   published: boolean;
   active: boolean;
-  payload_json?: Record<string, unknown> | null;
 };
 
 export type PhysicsSolutionRow = {
@@ -210,7 +209,7 @@ async function getPhysicsTaskRows(filters: {
   let query = supabase
     .from("tasks")
     .select(
-      "id, subject_id, exam_component_id, primary_topic_id, task_type_id, source_id, external_source_ref, title, prompt_md, stimulus_md, asset_group_id, difficulty_base, cognitive_load, estimated_time_sec, year, official, published, active, payload_json",
+      "id, subject_id, exam_component_id, primary_topic_id, task_type_id, source_id, external_source_ref, title, prompt_md, stimulus_md, asset_group_id, difficulty_base, cognitive_load, estimated_time_sec, year, official, published, active",
     )
     .eq("subject_id", physicsSubject.id)
     .eq("published", true)
