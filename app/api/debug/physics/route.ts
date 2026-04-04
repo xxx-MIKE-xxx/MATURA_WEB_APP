@@ -12,10 +12,17 @@ function serializeError(error: unknown) {
   }
 
   if (typeof error === "object" && error !== null) {
-    return {
-      ...error,
-      raw: JSON.stringify(error, null, 2),
-    };
+    try {
+      return {
+        ...(error as Record<string, unknown>),
+        raw: JSON.stringify(error, null, 2),
+      };
+    } catch {
+      return {
+        message: "Non-Error object thrown",
+        raw: String(error),
+      };
+    }
   }
 
   return {
@@ -32,7 +39,7 @@ export async function GET() {
       ok: true,
       subject,
       taskCount: tasks.length,
-      firstTaskId: tasks[0]?.task?.id ?? tasks[0]?.id ?? null,
+      firstTaskId: tasks[0]?.task?.id ?? null,
     });
   } catch (error) {
     return NextResponse.json(
